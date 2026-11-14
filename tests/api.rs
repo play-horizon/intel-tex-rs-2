@@ -243,10 +243,10 @@ fn stride_smaller_than_a_row(codec: Codec) {
 }
 
 fn size_beyond_i32(codec: Codec) {
-    // The kernels would compute the offset of the last row in an `i32`, which overflows.
+    // The offset of the last row, 7 * stride, would overflow the kernels' `i32`.
     let image = gradient(8, 8);
     let data = codec.input.convert(&image);
-    (codec.compress)(&data, 8, 8, (i32::MAX as u32) / 8 + 1);
+    (codec.compress)(&data, 8, 8, (i32::MAX as u32) / 4 + 1);
 }
 
 macro_rules! api_tests {

@@ -31,7 +31,8 @@ fn stride_smaller_than_a_row_panics() {
 #[test]
 #[should_panic(expected = "doesn't fit in an i32")]
 fn size_beyond_i32_panics() {
-    compress_8x8(&[0; 32 * 8], (i32::MAX as u32) / 8 + 1);
+    // The offset of the last row, 7 * stride, would overflow the kernels' `i32`.
+    compress_8x8(&[0; 32 * 8], (i32::MAX as u32) / 4 + 1);
 }
 
 #[test]
