@@ -4,7 +4,7 @@ use crate::RgSurface;
 #[inline(always)]
 pub fn calc_output_size(width: u32, height: u32) -> usize {
     // BC5 uses 16 bytes to store each 4×4 block, giving it an average data rate of 1 byte per pixel.
-    let block_count = crate::divide_up_by_multiple(width * height, 16) as usize;
+    let block_count = (width as usize * height as usize).div_ceil(16);
     block_count * 16
 }
 
@@ -20,6 +20,7 @@ pub fn compress_blocks_into(surface: &RgSurface, blocks: &mut [u8]) {
         blocks.len(),
         calc_output_size(surface.width, surface.height)
     );
+    assert!(surface.data.len() >= surface.height as usize * surface.stride as usize);
 
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,
@@ -30,5 +31,28 @@ pub fn compress_blocks_into(surface: &RgSurface, blocks: &mut [u8]) {
 
     unsafe {
         kernel::CompressBlocksBC5_ispc(&mut surface, blocks.as_mut_ptr());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn output_size() {
+        assert_eq!(calc_output_size(0, 0), 0);
+        assert_eq!(calc_output_size(4, 4), 16);
+        assert_eq!(calc_output_size(8, 4), 2 * 16);
+        assert_eq!(calc_output_size(256, 256), 64 * 64 * 16);
+        assert_eq!(calc_output_size(4096, 4096), 1024 * 1024 * 16);
+        // Partial blocks are rounded up by texel count.
+        assert_eq!(calc_output_size(1, 1), 16);
+        assert_eq!(calc_output_size(4, 5), 2 * 16);
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn output_size_does_not_overflow_u32() {
+        assert_eq!(calc_output_size(65536, 65536), 16384 * 16384 * 16);
     }
 }

@@ -9,8 +9,8 @@ pub struct EncodeSettings {
 #[inline(always)]
 pub fn calc_output_size(width: u32, height: u32) -> usize {
     // ETC1 uses a fixed block size of 8 bytes (64 bits) and a fixed tile size of 4x4 texels.
-    let block_count = crate::divide_up_by_multiple(width * height, 16);
-    block_count as usize * 8
+    let block_count = (width as usize * height as usize).div_ceil(16);
+    block_count * 8
 }
 
 pub fn compress_blocks(settings: &EncodeSettings, surface: &RgbaSurface) -> Vec<u8> {
@@ -25,6 +25,8 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         blocks.len(),
         calc_output_size(surface.width, surface.height)
     );
+    assert!(surface.data.len() >= surface.height as usize * surface.stride as usize);
+
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,
         height: surface.height as i32,
@@ -44,5 +46,25 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
 pub fn slow_settings() -> EncodeSettings {
     EncodeSettings {
         fast_skip_threshold: 6,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn output_size() {
+        assert_eq!(calc_output_size(0, 0), 0);
+        assert_eq!(calc_output_size(4, 4), 8);
+        assert_eq!(calc_output_size(8, 4), 2 * 8);
+        assert_eq!(calc_output_size(256, 256), 64 * 64 * 8);
+        assert_eq!(calc_output_size(1, 1), 8);
+        assert_eq!(calc_output_size(4, 5), 2 * 8);
+    }
+
+    #[test]
+    fn slow_settings_threshold() {
+        assert_eq!(slow_settings().fast_skip_threshold, 6);
     }
 }

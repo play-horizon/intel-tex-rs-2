@@ -126,8 +126,8 @@ fn astc_rank(
 #[inline(always)]
 pub fn calc_output_size(width: u32, height: u32) -> usize {
     // ASTC uses a fixed block size of 16 bytes (128 bits).
-    let block_count = crate::divide_up_by_multiple(width * height, 16);
-    block_count as usize * 16
+    let block_count = (width as usize * height as usize).div_ceil(16);
+    block_count * 16
 }
 
 pub fn compress_blocks(settings: &EncodeSettings, surface: &RgbaSurface) -> Vec<u8> {
@@ -146,6 +146,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         blocks.len(),
         calc_output_size(surface.width, surface.height)
     );
+    assert!(surface.data.len() >= surface.height as usize * surface.stride as usize);
 
     let tex_width = surface.width / settings.block_width;
     let program_count = unsafe { kernel_astc::get_programCount() as u32 };
@@ -281,3 +282,46 @@ extern "C" {
     );
 }
 */
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn presets_carry_block_size() {
+        for (w, h) in [(4, 4), (5, 4), (6, 6), (8, 5), (8, 8)] {
+            for s in [
+                opaque_fast_settings(w, h),
+                alpha_fast_settings(w, h),
+                alpha_slow_settings(w, h),
+            ] {
+                assert_eq!((s.block_width, s.block_height), (w, h));
+            }
+        }
+    }
+
+    #[test]
+    fn preset_channels() {
+        assert_eq!(opaque_fast_settings(4, 4).channels, 3);
+        assert_eq!(alpha_fast_settings(4, 4).channels, 4);
+        assert_eq!(alpha_slow_settings(4, 4).channels, 4);
+        assert!(
+            alpha_slow_settings(4, 4).fast_skip_threshold
+                > alpha_fast_settings(4, 4).fast_skip_threshold
+        );
+    }
+
+    #[test]
+    fn can_store_bounds() {
+        assert!(can_store(0, 1));
+        assert!(can_store(1, 1));
+        assert!(!can_store(2, 1));
+        assert!(can_store(255, 8));
+        assert!(!can_store(256, 8));
+        assert!(!can_store(-1, 8));
+    }
+
+    // `compress_blocks` itself isn't tested here: it's unimplemented (`astc_encode` calls
+    // `unimplemented!()`), and referencing it from a test binary pulls in the prebuilt C++
+    // ASTC helper, which doesn't link on Linux without the C++ runtime.
+}
