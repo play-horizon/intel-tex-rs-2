@@ -7,7 +7,19 @@ pub struct EncodeSettings {
     pub fast_mode: bool,
     pub refine_iterations_1p: u32,
     pub refine_iterations_2p: u32,
+    /// How many of the 32 two-region partitions are fully evaluated, at most 32.
     pub fast_skip_threshold: u32,
+}
+
+impl EncodeSettings {
+    /// Panics unless the kernel can use every setting without running past its arrays.
+    fn assert_valid(&self) {
+        assert!(
+            self.fast_skip_threshold <= 32,
+            "fast_skip_threshold {} is larger than the 32 partitions it selects from",
+            self.fast_skip_threshold
+        );
+    }
 }
 
 #[inline(always)]
@@ -30,6 +42,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         calc_output_size(surface.width, surface.height)
     );
     surface.assert_readable(8);
+    settings.assert_valid();
 
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,

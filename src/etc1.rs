@@ -3,7 +3,21 @@ use crate::RgbaSurface;
 
 #[derive(Debug, Copy, Clone)]
 pub struct EncodeSettings {
+    /// How many of the 165 candidates the kernel ranks for each half-block are fully evaluated,
+    /// from 1 to 165.
     pub fast_skip_threshold: u32,
+}
+
+impl EncodeSettings {
+    /// Panics unless the kernel can use every setting: it runs past its arrays above 165, and
+    /// with 0 it evaluates no candidate and writes a block that doesn't encode the input.
+    fn assert_valid(&self) {
+        assert!(
+            (1..=165).contains(&self.fast_skip_threshold),
+            "fast_skip_threshold {} is outside 1..=165, the candidates it selects from",
+            self.fast_skip_threshold
+        );
+    }
 }
 
 #[inline(always)]
@@ -26,6 +40,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         calc_output_size(surface.width, surface.height)
     );
     surface.assert_readable(4);
+    settings.assert_valid();
 
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,

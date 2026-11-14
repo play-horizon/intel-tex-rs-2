@@ -6,12 +6,43 @@ pub struct EncodeSettings {
     pub mode_selection: [bool; 4usize],
     pub refine_iterations: [u32; 8usize],
     pub skip_mode2: bool,
+    /// How many of the 64 two-subset partitions mode 1 fully evaluates, at most 64.
     pub fast_skip_threshold_mode1: u32,
+    /// How many of the 64 two-subset partitions mode 3 fully evaluates, at most 64.
     pub fast_skip_threshold_mode3: u32,
+    /// How many of the 64 two-subset partitions mode 7 fully evaluates, at most 64.
     pub fast_skip_threshold_mode7: u32,
+    /// The first channel modes 4 and 5 try to code separately, from 0 to 3.
     pub mode45_channel0: u32,
     pub refine_iterations_channel: u32,
+    /// 3 to encode RGB, alpha taken as opaque, or 4 to encode RGBA.
     pub channels: i32,
+}
+
+impl EncodeSettings {
+    /// Panics unless the kernel can use every setting without running past its arrays.
+    fn assert_valid(&self) {
+        assert!(
+            self.channels == 3 || self.channels == 4,
+            "channels is {}, not 3 or 4",
+            self.channels
+        );
+        assert!(
+            self.mode45_channel0 <= 3,
+            "mode45_channel0 {} is not a channel from 0 to 3",
+            self.mode45_channel0
+        );
+        for (name, value) in [
+            ("fast_skip_threshold_mode1", self.fast_skip_threshold_mode1),
+            ("fast_skip_threshold_mode3", self.fast_skip_threshold_mode3),
+            ("fast_skip_threshold_mode7", self.fast_skip_threshold_mode7),
+        ] {
+            assert!(
+                value <= 64,
+                "{name} {value} is larger than the 64 partitions it selects from"
+            );
+        }
+    }
 }
 
 #[inline(always)]
@@ -34,6 +65,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         calc_output_size(surface.width, surface.height)
     );
     surface.assert_readable(4);
+    settings.assert_valid();
 
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,
