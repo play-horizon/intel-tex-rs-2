@@ -3,7 +3,7 @@
 
 use intel_tex_2::{bc6h, bc7, etc1, RgbaSurface};
 
-/// A 4x4 surface: one block of RGBA8, or half of one of the RGBA16F input of BC6H.
+/// A 4x4 block of the RGBA16F input of BC6H; the RGBA8 surfaces use its first half.
 const DATA: [u8; 4 * 4 * 8] = [0x40; 4 * 4 * 8];
 
 fn rgba8() -> RgbaSurface<'static> {
@@ -82,10 +82,20 @@ fn bc6h_fast_skip_threshold_above_32_panics() {
 
 #[test]
 #[should_panic(expected = "channels is 5, not 3 or 4")]
-fn bc7_channels_other_than_3_or_4_panic() {
+fn bc7_channels_above_4_panic() {
     let settings = bc7::EncodeSettings {
         channels: 5,
         ..bc7::alpha_basic_settings()
+    };
+    bc7::compress_blocks(&settings, &rgba8());
+}
+
+#[test]
+#[should_panic(expected = "channels is 2, not 3 or 4")]
+fn bc7_channels_below_3_panic() {
+    let settings = bc7::EncodeSettings {
+        channels: 2,
+        ..bc7::opaque_basic_settings()
     };
     bc7::compress_blocks(&settings, &rgba8());
 }
