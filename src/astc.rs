@@ -322,6 +322,5 @@ mod tests {
     }
 
     // `compress_blocks` itself isn't tested here: it's unimplemented (`astc_encode` calls
-    // `unimplemented!()`), and referencing it from a test binary pulls in the prebuilt C++
-    // ASTC helper, which doesn't link on Linux without the C++ runtime.
+    // `unimplemented!()`). `tests/astc.rs` checks that the ASTC kernel links.
 }
