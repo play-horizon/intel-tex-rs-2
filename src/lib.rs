@@ -18,7 +18,7 @@ pub mod etc1;
 #[derive(Debug, Copy, Clone)]
 pub struct Surface<'a, const COMPONENTS: usize> {
     /// The pixel data for the image.
-    /// The data does not need to be tightly packed, but if it isn't, stride must be different from `width * 4`.
+    /// The data does not need to be tightly packed: `stride` gives the distance between rows.
     ///
     /// Must be at least `stride * height` bytes.
     pub data: &'a [u8],
@@ -27,7 +27,8 @@ pub struct Surface<'a, const COMPONENTS: usize> {
     /// The height of the image in texels.
     pub height: u32,
     /// The stride between the rows of the image, in bytes.
-    /// If `data` is tightly packed, this is expected to be `width * 4`.
+    /// If `data` is tightly packed, this is `width` times the size of a texel (4 bytes for RGBA8,
+    /// 8 for the RGBA16F input of BC6H, 2 for BC5, 1 for BC4).
     ///
     /// Must be at least the size of a row, and `stride * height` must fit in an `i32`: the kernels
     /// compute their offsets into `data` with 32-bit integers.
