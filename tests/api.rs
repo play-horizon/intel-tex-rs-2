@@ -235,6 +235,20 @@ fn stride_larger_than_data(codec: Codec) {
     (codec.compress)(&data, 8, 8, tight_stride(&codec, 8) + 1);
 }
 
+fn stride_smaller_than_a_row(codec: Codec) {
+    // `data` covers `stride * height`, but the last row would end past it.
+    let stride = tight_stride(&codec, 8) - 1;
+    let data = vec![0u8; stride as usize * 8];
+    (codec.compress)(&data, 8, 8, stride);
+}
+
+fn size_beyond_i32(codec: Codec) {
+    // The kernels would compute the offset of the last row in an `i32`, which overflows.
+    let image = gradient(8, 8);
+    let data = codec.input.convert(&image);
+    (codec.compress)(&data, 8, 8, (i32::MAX as u32) / 8 + 1);
+}
+
 macro_rules! api_tests {
     ($($module:ident => $codec:expr),* $(,)?) => {$(
         mod $module {
@@ -334,6 +348,18 @@ macro_rules! api_tests {
             #[should_panic]
             fn stride_larger_than_data_panics() {
                 super::stride_larger_than_data($codec);
+            }
+
+            #[test]
+            #[should_panic(expected = "is smaller than a row")]
+            fn stride_smaller_than_a_row_panics() {
+                super::stride_smaller_than_a_row($codec);
+            }
+
+            #[test]
+            #[should_panic(expected = "doesn't fit in an i32")]
+            fn size_beyond_i32_panics() {
+                super::size_beyond_i32($codec);
             }
         }
     )*};

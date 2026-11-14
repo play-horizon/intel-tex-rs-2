@@ -146,7 +146,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         blocks.len(),
         calc_output_size(surface.width, surface.height)
     );
-    assert!(surface.data.len() >= surface.height as usize * surface.stride as usize);
+    surface.assert_readable(4);
 
     let tex_width = surface.width / settings.block_width;
     let program_count = unsafe { kernel_astc::get_programCount() as u32 };

@@ -29,7 +29,7 @@ pub fn compress_blocks_into(settings: &EncodeSettings, surface: &RgbaSurface, bl
         blocks.len(),
         calc_output_size(surface.width, surface.height)
     );
-    assert!(surface.data.len() >= surface.height as usize * surface.stride as usize);
+    surface.assert_readable(8);
 
     let mut surface = kernel::rgba_surface {
         width: surface.width as i32,
